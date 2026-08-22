@@ -109,11 +109,10 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         // Find the existing registration.
         Registration registration = registrationRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Registration not found with id: " + id
-                        )
-                );
+
+                        .orElseThrow(() -> new RegistrationNotFoundException(id));
+
+
 
         // Update registration fields.
         registration.setDesignation(request.getDesignation());
@@ -156,7 +155,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         Registration registration = registrationRepository.findById(id)
                 .orElseThrow(() -> new RegistrationNotFoundException(id));
-        
+
 
         // Deleting the parent registration also deletes its
         // dispatch methods because of Cascade/relationship configuration.
