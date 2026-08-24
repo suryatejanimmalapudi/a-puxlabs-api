@@ -35,4 +35,78 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(errorResponse);
     }
+
+    /**
+     * Handles requests for physical examinations that do not exist.
+     *
+     * @param exception physical-examination-not-found exception
+     * @param request current HTTP request
+     * @return standardized 404 error response
+     */
+    @ExceptionHandler(PhysicalExaminationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePhysicalExaminationNotFound(
+            PhysicalExaminationNotFoundException exception,
+            HttpServletRequest request) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
+    /**
+     * Handles requests for eye examinations that do not exist.
+     *
+     * @param exception eye-examination-not-found exception
+     * @param request current HTTP request
+     * @return standardized 404 error response
+     */
+    @ExceptionHandler(EyeExaminationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleEyeExaminationNotFound(
+            EyeExaminationNotFoundException exception,
+            HttpServletRequest request) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
+
+    /**
+     * Handles requests for audiograms that do not exist.
+     *
+     * @param exception audiogram-not-found exception
+     * @param request current HTTP request
+     * @return standardized 404 error response
+     */
+    @ExceptionHandler(AudiogramNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAudiogramNotFound(
+            AudiogramNotFoundException exception,
+            HttpServletRequest request) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
 }

@@ -1,5 +1,8 @@
 package com.apuxlabs.apuxlabs_api.registration.entity;
 
+import com.apuxlabs.apuxlabs_api.examination.entity.Audiogram;
+import com.apuxlabs.apuxlabs_api.examination.entity.EyeExamination;
+import com.apuxlabs.apuxlabs_api.examination.entity.PhysicalExamination;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -66,5 +69,33 @@ public class Registration {
               )
     private List<RegistrationDispatchMethod> dispatchMethods = new ArrayList<>();
 
-    // Getters and setters
+    /**
+     * Physical examinations performed for this registration.
+     *
+     * A registration can have multiple physical examinations over time,
+     * such as annual health checkups.
+     */
+    @OneToMany(
+            mappedBy = "registration",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<PhysicalExamination> physicalExaminations = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "registration",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<EyeExamination> eyeExaminations = new ArrayList<>();
+
+    /**
+     * Audiograms performed for this registration over time.
+     */
+    @OneToMany(
+            mappedBy = "registration",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<Audiogram> audiograms = new ArrayList<>();
 }
