@@ -8,29 +8,44 @@ services:
       POSTGRES_PASSWORD: secret
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  flyway:
+    image: flyway/flyway:latest
+    command:
+      - -url=jdbc:postgresql://postgres:5432/mydatabase
+      - -user=myuser
+      - -password=secret
+      - -connectRetries=10
+      - migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
-
     ports:
       - "8080:8080"
-
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mydatabase
       SPRING_DATASOURCE_USERNAME: myuser
       SPRING_DATASOURCE_PASSWORD: secret
-
-      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/mydatabase
-      SPRING_FLYWAY_USER: myuser
-      SPRING_FLYWAY_PASSWORD: secret
-
+      SPRING_FLYWAY_ENABLED: "false"
     depends_on:
       postgres:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
