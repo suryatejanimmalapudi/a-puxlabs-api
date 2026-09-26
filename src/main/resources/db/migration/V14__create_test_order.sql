@@ -1,4 +1,5 @@
 -- 1. Tests Master Catalog
+-- Stores the available tests the clinic offers (e.g., CBP, LFT)
 CREATE TABLE tests_master (
     id SERIAL PRIMARY KEY,
     code VARCHAR(50) UNIQUE NOT NULL,
@@ -13,6 +14,7 @@ CREATE INDEX idx_tests_master_dept ON tests_master(department);
 
 
 -- 2. Lab Orders (The Front Desk / Billing View)
+-- One record per patient transaction at the front desk
 CREATE TABLE lab_orders (
     id SERIAL PRIMARY KEY,
     registration_id INTEGER NOT NULL,
@@ -36,6 +38,7 @@ CREATE INDEX idx_lab_orders_registration ON lab_orders(registration_id);
 
 
 -- 3. Lab Test Requests (The Laboratory Technician Queue)
+-- Maps specific tests to a specific order. Drives the Pending Queue UI.
 CREATE TABLE lab_test_requests (
     id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL,
