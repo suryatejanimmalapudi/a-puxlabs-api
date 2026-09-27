@@ -27,7 +27,6 @@ public class RegistrationMapper
 
         Registration registration = new Registration();
 
-        registration.setDesignation(dto.getDesignation());
         registration.setFirstName(dto.getFirstName());
         registration.setLastName(dto.getLastName());
         registration.setDateOfBirth(dto.getDateOfBirth());
@@ -54,7 +53,6 @@ public class RegistrationMapper
         RegistrationResponseDto response = new RegistrationResponseDto();
 
         response.setId(registration.getId());
-        response.setDesignation(registration.getDesignation());
         response.setFirstName(registration.getFirstName());
         response.setLastName(registration.getLastName());
         response.setDateOfBirth(registration.getDateOfBirth());

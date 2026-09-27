@@ -9,10 +9,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**") // Apply this to all your API endpoints
-                .allowedOrigins("http://localhost:3000") // Allow your Next.js frontend
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allow these HTTP methods
-                .allowedHeaders("*") // Allow all headers (necessary for multipart/form-data boundary generation)
-                .allowCredentials(true); // Allow sending cookies/auth headers if needed in the future
+        registry.addMapping("/**")
+                // DO NOT USE .allowedOrigins("*") if allowCredentials is true
+                .allowedOriginPatterns("*") // Use this instead for wildcards
+                // OR better yet, specify your Next.js local URL:
+                // .allowedOrigins("http://localhost:3000")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }

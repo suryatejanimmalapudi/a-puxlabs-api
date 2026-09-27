@@ -1,0 +1,1 @@
+ALTER TABLE lab_orders DROP COLUMN registration_fee;

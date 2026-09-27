@@ -9,6 +9,5 @@ import java.util.List;
 public class CreateOrderRequestDto {
     private Long registrationId;
     private String referringDoctorName;
-    private BigDecimal registrationFee;
     private List<TestItemRequestDto> tests;
 }

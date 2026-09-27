@@ -29,7 +29,6 @@ public class LabOrder {
     private Registration registration;
 
     private String referringDoctorName;
-    private BigDecimal registrationFee;
     private BigDecimal totalDiscount;
     private BigDecimal grossAmount;
     private BigDecimal netAmount;

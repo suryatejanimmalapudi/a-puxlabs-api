@@ -19,7 +19,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/worklist")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Laboratory Worklist", description = "Endpoints for managing the laboratory technician worklist and result entry")
 public class LaboratoryController {
 

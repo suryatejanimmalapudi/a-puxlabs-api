@@ -1,8 +1,6 @@
 package com.apuxlabs.apuxlabs_api.registration.entity;
 
-import com.apuxlabs.apuxlabs_api.examination.entity.Audiogram;
-import com.apuxlabs.apuxlabs_api.examination.entity.EyeExamination;
-import com.apuxlabs.apuxlabs_api.examination.entity.PhysicalExamination;
+import com.apuxlabs.apuxlabs_api.testorder.entity.LabOrder; // Adjust import to your package structure
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,9 +21,6 @@ public class Registration {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(length = 20)
-    private String designation;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -66,36 +62,15 @@ public class Registration {
             mappedBy = "registration",
             cascade = CascadeType.ALL,
             orphanRemoval = true
-              )
+    )
     private List<RegistrationDispatchMethod> dispatchMethods = new ArrayList<>();
 
-    /**
-     * Physical examinations performed for this registration.
-     *
-     * A registration can have multiple physical examinations over time,
-     * such as annual health checkups.
-     */
+    // NEW: Replaces Physical, Eye, and Audiogram lists.
+    // All clinical activities are now tracked as orders containing JSONB test requests.
     @OneToMany(
             mappedBy = "registration",
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<PhysicalExamination> physicalExaminations = new ArrayList<>();
-
-    @OneToMany(
-            mappedBy = "registration",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<EyeExamination> eyeExaminations = new ArrayList<>();
-
-    /**
-     * Audiograms performed for this registration over time.
-     */
-    @OneToMany(
-            mappedBy = "registration",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<Audiogram> audiograms = new ArrayList<>();
+    private List<LabOrder> labOrders = new ArrayList<>();
 }
