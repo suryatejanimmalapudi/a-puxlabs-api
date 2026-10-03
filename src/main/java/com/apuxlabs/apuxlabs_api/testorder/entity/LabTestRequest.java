@@ -44,7 +44,16 @@ public class LabTestRequest {
     private TestPriority priority;
 
     @Enumerated(EnumType.STRING)
-    private TestStatus status;
+    private TestStatus status = TestStatus.PENDING_COLLECTION;
+
+    @Column(name = "collected_by")
+    private String collectedBy;
+
+    @Column(name = "collected_at")
+    private LocalDateTime collectedAt;
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
 
 
     // Hibernate 6/7 native JSONB mapping

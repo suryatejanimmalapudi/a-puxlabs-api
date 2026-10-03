@@ -23,7 +23,7 @@ public class LaboratoryService {
 
     @Transactional(readOnly = true)
     public List<PendingTestDto> getPendingWorklist() {
-        List<LabTestRequest> pendingRequests = testRequestRepository.findPendingWorklist(TestStatus.PENDING);
+        List<LabTestRequest> pendingRequests = testRequestRepository.findPendingWorklist(TestStatus.PENDING_COLLECTION);
 
         return pendingRequests.stream().map(this::mapToPendingTestDto).collect(Collectors.toList());
     }
@@ -33,7 +33,7 @@ public class LaboratoryService {
         LabTestRequest request = testRequestRepository.findByBarcode(barcode)
                 .orElseThrow(() -> new RuntimeException("Test request not found with barcode: " + barcode));
 
-        if (request.getStatus() != TestStatus.PENDING) {
+        if (request.getStatus() != TestStatus.PENDING_COLLECTION) {
             throw new IllegalStateException("Can only submit results for pending tests.");
         }
 

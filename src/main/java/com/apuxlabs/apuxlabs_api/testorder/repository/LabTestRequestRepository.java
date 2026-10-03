@@ -22,4 +22,7 @@ public interface LabTestRequestRepository extends JpaRepository<LabTestRequest, 
     List<LabTestRequest> findPendingWorklist(TestStatus status);
 
     Optional<LabTestRequest> findByBarcode(String barcode);
+
+    // Auto-generates: SELECT * FROM lab_test_requests WHERE status != ?
+    List<LabTestRequest> findByStatusNot(TestStatus status);
 }

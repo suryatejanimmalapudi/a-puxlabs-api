@@ -67,7 +67,7 @@ public class OrderService {
             labTest.setBasePrice(basePrice);
             labTest.setDiscountAmount(itemDiscount);
             labTest.setPriceCharged(priceCharged);
-            labTest.setStatus(TestStatus.PENDING);
+            labTest.setStatus(TestStatus.PENDING_COLLECTION);
             labTest.setPriority(TestPriority.Routine); // Can be made dynamic later if needed
 
             // Generate a unique, readable barcode (e.g., ORD-A1B2C3-1)
