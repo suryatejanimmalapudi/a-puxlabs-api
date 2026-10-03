@@ -62,4 +62,13 @@ public class LabTestRequest {
     private Map<String, Object> resultData;
 
     private LocalDateTime completedAt;
+
+    @Column(name = "verified_by")
+    private String verifiedBy;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
 }

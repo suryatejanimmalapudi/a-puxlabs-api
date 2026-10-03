@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -32,6 +33,8 @@ public class RegistrationResponseDto {
     private Long referringDoctorId;
 
     private Long rateListId;
+
+    private BigDecimal registrationAmount;
 
     private LocalDateTime registrationDate;
 

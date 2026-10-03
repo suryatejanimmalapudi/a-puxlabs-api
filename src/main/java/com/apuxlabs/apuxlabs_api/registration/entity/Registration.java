@@ -46,6 +46,9 @@ public class Registration {
     @Column(name = "rate_list_id")
     private Long rateListId;
 
+    @Column(name = "registration_amount", nullable = false)
+    private java.math.BigDecimal registrationAmount = java.math.BigDecimal.ZERO;
+
     @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
 

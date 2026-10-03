@@ -2,6 +2,9 @@ package com.apuxlabs.apuxlabs_api.testorder.service;
 
 import com.apuxlabs.apuxlabs_api.registration.entity.Registration;
 import com.apuxlabs.apuxlabs_api.registration.repository.RegistrationRepository;
+import com.apuxlabs.apuxlabs_api.billing.entity.BillingInvoice;
+import com.apuxlabs.apuxlabs_api.billing.entity.BillingInvoiceItem;
+import com.apuxlabs.apuxlabs_api.billing.repository.BillingInvoiceRepository;
 import com.apuxlabs.apuxlabs_api.testorder.dto.CreateOrderRequestDto;
 import com.apuxlabs.apuxlabs_api.testorder.dto.TestItemRequestDto;
 import com.apuxlabs.apuxlabs_api.testorder.entity.LabOrder;
@@ -18,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class OrderService {
     private final LabOrderRepository labOrderRepository;
     private final TestMasterRepository testMasterRepository;
     private final RegistrationRepository registrationRepository;
+    private final BillingInvoiceRepository billingInvoiceRepository;
 
     @Transactional
     public Long createOrder(CreateOrderRequestDto request) {
@@ -84,6 +90,27 @@ public class OrderService {
 
         // 4. Save order and cascade test requests
         LabOrder savedOrder = labOrderRepository.save(order);
+
+        // Orders created later from Patient Directory must also be visible in Billing.
+        // Keep them as a separate invoice so the registration invoice is not modified.
+        BillingInvoice invoice = new BillingInvoice();
+        invoice.setRegistration(registration);
+        invoice.setInvoiceNumber("INV-" + LocalDate.now().getYear() + "-" + String.format("%04d", new Random().nextInt(9999) + 1));
+        invoice.setDiscount(BigDecimal.ZERO);
+        invoice.setTaxRate(BigDecimal.ZERO);
+        invoice.setAmountPaid(BigDecimal.ZERO);
+        invoice.setCreatedAt(LocalDate.now());
+        invoice.setDueDate(LocalDate.now().plusDays(30));
+        order.getTestRequests().forEach(test -> {
+            BillingInvoiceItem item = new BillingInvoiceItem();
+            item.setInvoice(invoice);
+            item.setCode(test.getTestMaster().getCode());
+            item.setName(test.getTestMaster().getName());
+            item.setPrice(test.getPriceCharged());
+            item.setQuantity(1);
+            invoice.getItems().add(item);
+        });
+        billingInvoiceRepository.save(invoice);
 
         return savedOrder.getId();
     }

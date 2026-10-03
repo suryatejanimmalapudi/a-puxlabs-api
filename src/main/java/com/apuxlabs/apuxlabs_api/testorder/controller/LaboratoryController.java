@@ -2,6 +2,8 @@ package com.apuxlabs.apuxlabs_api.testorder.controller;
 
 import com.apuxlabs.apuxlabs_api.testorder.dto.PendingTestDto;
 import com.apuxlabs.apuxlabs_api.testorder.dto.ResultEntryDto;
+import com.apuxlabs.apuxlabs_api.testorder.dto.ReportDto;
+import com.apuxlabs.apuxlabs_api.testorder.dto.VerifyReportRequestDto;
 import com.apuxlabs.apuxlabs_api.testorder.service.LaboratoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -64,6 +66,34 @@ public class LaboratoryController {
             @RequestBody ResultEntryDto payload) {
 
         laboratoryService.submitResults(barcode, payload);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/reports")
+    public ResponseEntity<List<ReportDto>> getReports() {
+        return ResponseEntity.ok(laboratoryService.getReports());
+    }
+
+    @GetMapping("/reports/patient/{patientId}")
+    public ResponseEntity<List<ReportDto>> getPatientReports(@PathVariable Long patientId) {
+        return ResponseEntity.ok(laboratoryService.getPatientReports(patientId));
+    }
+
+    @PutMapping("/reports/{id}/verify")
+    public ResponseEntity<Void> verifyReport(@PathVariable Long id, @RequestBody VerifyReportRequestDto request) {
+        laboratoryService.verifyReport(id, request.getVerifiedBy());
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/reports/{id}/deliver")
+    public ResponseEntity<Void> deliverReport(@PathVariable Long id) {
+        laboratoryService.deliverReport(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/reports/{id}/reject")
+    public ResponseEntity<Void> rejectReport(@PathVariable Long id) {
+        laboratoryService.rejectReport(id);
         return ResponseEntity.ok().build();
     }
 }
