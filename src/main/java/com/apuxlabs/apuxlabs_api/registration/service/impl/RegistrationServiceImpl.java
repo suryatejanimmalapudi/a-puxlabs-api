@@ -19,6 +19,14 @@ import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.Random;
 import java.util.List;
+import com.apuxlabs.apuxlabs_api.testorder.entity.LabOrder;
+import com.apuxlabs.apuxlabs_api.testorder.entity.LabTestRequest;
+import com.apuxlabs.apuxlabs_api.testorder.entity.TestMaster;
+import com.apuxlabs.apuxlabs_api.testorder.enums.TestPriority;
+import com.apuxlabs.apuxlabs_api.testorder.enums.TestStatus;
+import com.apuxlabs.apuxlabs_api.testorder.repository.LabOrderRepository;
+import com.apuxlabs.apuxlabs_api.testorder.repository.TestMasterRepository;
+import java.util.UUID;
 
 @Service
 public class RegistrationServiceImpl implements RegistrationService {
@@ -27,17 +35,23 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final RegistrationMapper registrationMapper;
     private final RegistrationDispatchMethodRepository registrationDispatchMethodRepository;
     private final BillingInvoiceRepository billingInvoiceRepository;
+    private final LabOrderRepository labOrderRepository;
+    private final TestMasterRepository testMasterRepository;
 
     public RegistrationServiceImpl(
             RegistrationRepository registrationRepository,
             RegistrationMapper registrationMapper,
             RegistrationDispatchMethodRepository registrationDispatchMethodRepository,
-            BillingInvoiceRepository billingInvoiceRepository) {
+            BillingInvoiceRepository billingInvoiceRepository,
+            LabOrderRepository labOrderRepository,
+            TestMasterRepository testMasterRepository) {
 
         this.registrationRepository = registrationRepository;
         this.registrationMapper = registrationMapper;
         this.registrationDispatchMethodRepository = registrationDispatchMethodRepository;
         this.billingInvoiceRepository = billingInvoiceRepository;
+        this.labOrderRepository = labOrderRepository;
+        this.testMasterRepository = testMasterRepository;
     }
 
     @Override
@@ -47,6 +61,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         Registration registration = registrationMapper.toEntity(request);
 
         registration.setRegistrationDate(LocalDateTime.now());
+        registration.setBarcode("REG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         registration.setStatus("ACTIVE");
         registration.setRegistrationAmount(request.getRegistrationAmount() == null ? BigDecimal.ZERO : request.getRegistrationAmount());
         registration.setCreatedAt(LocalDateTime.now());
@@ -61,8 +76,37 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         Registration savedRegistration = registrationRepository.save(registration);
 
-        // Every registration creates the patient's initial bill, even when no
-        // laboratory tests are ordered. Tests can be added to later invoices.
+        // Registration alone is valid and must not create an empty invoice/order.
+        if (request.getTestMasterIds() == null || request.getTestMasterIds().isEmpty()) {
+            return registrationMapper.toResponseDto(savedRegistration);
+        }
+
+        LabOrder order = new LabOrder();
+        order.setRegistration(savedRegistration);
+        order.setReferringDoctorName("Self / No referring doctor");
+        BigDecimal gross = BigDecimal.ZERO;
+        for (Long testId : request.getTestMasterIds()) {
+            TestMaster master = testMasterRepository.findById(testId)
+                    .orElseThrow(() -> new IllegalArgumentException("Inactive or unknown test: " + testId));
+            BigDecimal price = master.getDefaultPrice();
+            LabTestRequest item = new LabTestRequest();
+            item.setLabOrder(order);
+            item.setTestMaster(master);
+            item.setBasePrice(price);
+            item.setDiscountAmount(BigDecimal.ZERO);
+            item.setPriceCharged(price);
+            item.setPriority(TestPriority.Routine);
+            item.setStatus(TestStatus.PENDING_COLLECTION);
+            order.getTestRequests().add(item);
+            gross = gross.add(price);
+        }
+        BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
+        if (discount.compareTo(gross) > 0 || discount.signum() < 0) throw new IllegalArgumentException("Invalid discount");
+        order.setGrossAmount(gross);
+        order.setTotalDiscount(discount);
+        order.setNetAmount(gross.subtract(discount));
+        labOrderRepository.save(order);
+
         BillingInvoice invoice = new BillingInvoice();
         invoice.setRegistration(savedRegistration);
         invoice.setInvoiceNumber("INV-" + LocalDate.now().getYear() + "-" + String.format("%04d", new Random().nextInt(9999) + 1));
@@ -79,6 +123,15 @@ public class RegistrationServiceImpl implements RegistrationService {
         registrationItem.setPrice(savedRegistration.getRegistrationAmount());
         registrationItem.setQuantity(1);
         invoice.getItems().add(registrationItem);
+        order.getTestRequests().forEach(test -> {
+            BillingInvoiceItem item = new BillingInvoiceItem();
+            item.setInvoice(invoice);
+            item.setCode(test.getTestMaster().getCode());
+            item.setName(test.getTestMaster().getName());
+            item.setPrice(test.getPriceCharged());
+            item.setQuantity(1);
+            invoice.getItems().add(item);
+        });
         billingInvoiceRepository.save(invoice);
 
         return registrationMapper.toResponseDto(savedRegistration);

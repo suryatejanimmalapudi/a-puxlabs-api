@@ -59,13 +59,13 @@ public class LaboratoryController {
                     content = @Content
             )
     })
-    @PutMapping("/{barcode}/results")
+    @PutMapping("/{requestId}/results")
     public ResponseEntity<Void> submitResults(
-            @Parameter(description = "Barcode identifying the lab test request", required = true)
-            @PathVariable String barcode,
+            @Parameter(description = "Internal test request ID", required = true)
+            @PathVariable Long requestId,
             @RequestBody ResultEntryDto payload) {
 
-        laboratoryService.submitResults(barcode, payload);
+        laboratoryService.submitResults(requestId, payload);
         return ResponseEntity.ok().build();
     }
 

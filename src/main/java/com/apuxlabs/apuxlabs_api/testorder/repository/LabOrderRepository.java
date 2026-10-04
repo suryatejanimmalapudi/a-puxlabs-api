@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface LabOrderRepository extends JpaRepository<LabOrder, Long> {
     List<LabOrder> findByRegistrationIdOrderByOrderDateAsc(Long registrationId);
+
 }

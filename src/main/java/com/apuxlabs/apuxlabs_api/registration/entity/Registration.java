@@ -22,6 +22,9 @@ public class Registration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, length = 100)
+    private String barcode;
+
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Service
 public class GcsPdfStorageService {
@@ -26,18 +27,23 @@ public class GcsPdfStorageService {
      * @param customFileName Optional. If provided, saves the file with this name. If null, uses the file's original name.
      */
     public String uploadPdf(MultipartFile file, String customFileName) throws IOException {
+        return uploadFile(file, customFileName, "application/pdf");
+    }
+
+    public String uploadFile(MultipartFile file, String objectPath, String contentType) throws IOException {
+        var fileName = uploadObject(file, objectPath, contentType);
+        return String.format("https://storage.googleapis.com/%s/%s", bucketName, fileName);
+    }
+
+    /** Uploads and returns the bucket object path, keeping storage details out of the database URL layer. */
+    public String uploadObject(MultipartFile file, String objectPath, String contentType) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Cannot upload an empty file.");
         }
 
-        if (!"application/pdf".equals(file.getContentType())) {
-            throw new IllegalArgumentException("Only PDF files are allowed.");
-        }
-
         // Determine which filename to use
-        var fileName = (customFileName != null && !customFileName.isBlank())
-                ? customFileName
-                : file.getOriginalFilename();
+        var fileName = (objectPath != null && !objectPath.isBlank()) ? objectPath :
+                UUID.randomUUID() + "-" + file.getOriginalFilename();
 
         if (fileName == null || fileName.isBlank()) {
             throw new IllegalArgumentException("File name cannot be empty.");
@@ -45,11 +51,11 @@ public class GcsPdfStorageService {
 
         var blobId = BlobId.of(bucketName, fileName);
         var blobInfo = BlobInfo.newBuilder(blobId)
-                .setContentType("application/pdf")
+                .setContentType(contentType == null ? "application/octet-stream" : contentType)
                 .build();
 
         storage.create(blobInfo, file.getBytes());
 
-        return String.format("https://storage.googleapis.com/%s/%s", bucketName, fileName);
+        return fileName;
     }
 }

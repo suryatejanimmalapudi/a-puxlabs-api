@@ -76,10 +76,6 @@ public class OrderService {
             labTest.setStatus(TestStatus.PENDING_COLLECTION);
             labTest.setPriority(TestPriority.Routine); // Can be made dynamic later if needed
 
-            // Generate a unique, readable barcode (e.g., ORD-A1B2C3-1)
-            String shortId = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            labTest.setBarcode("ORD-" + shortId + "-" + (i + 1));
-
             order.getTestRequests().add(labTest);
         }
 

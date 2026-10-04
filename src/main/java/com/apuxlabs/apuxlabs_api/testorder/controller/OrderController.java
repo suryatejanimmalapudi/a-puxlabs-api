@@ -22,7 +22,7 @@ public class OrderController {
 
     @Operation(
             summary = "Create a new lab order",
-            description = "Creates a parent lab order and its associated test requests, generating unique barcodes for each test tube."
+            description = "Creates a parent lab order and its associated test requests with one accession barcode for the visit."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Order created successfully")

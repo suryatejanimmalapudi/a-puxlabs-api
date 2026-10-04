@@ -5,6 +5,8 @@ import com.apuxlabs.apuxlabs_api.testorder.dto.CollectionOrderDto;
 import com.apuxlabs.apuxlabs_api.testorder.entity.LabTestRequest;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestStatus;
 import com.apuxlabs.apuxlabs_api.testorder.repository.LabTestRequestRepository;
+import com.apuxlabs.apuxlabs_api.registration.entity.Registration;
+import com.apuxlabs.apuxlabs_api.registration.repository.RegistrationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class SampleCollectionService {
 
     private final LabTestRequestRepository labTestRequestRepository;
+    private final RegistrationRepository registrationRepository;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
 
     @Transactional(readOnly = true)
@@ -27,7 +30,7 @@ public class SampleCollectionService {
         List<LabTestRequest> requests = labTestRequestRepository.findByStatusNot(TestStatus.COMPLETED);
 
         return requests.stream().map(req -> CollectionOrderDto.builder()
-                .uid(req.getBarcode())
+                .uid(req.getId().toString())
                 .id(req.getLabOrder().getId().toString())
                 .patientId(req.getLabOrder().getRegistration().getId())
                 .patientName(req.getLabOrder().getRegistration().getFirstName() + " " + req.getLabOrder().getRegistration().getLastName())
@@ -44,7 +47,7 @@ public class SampleCollectionService {
                 .status(req.getStatus().name().replace("_", " "))
                 .collectedAt(req.getCollectedAt() != null ? req.getCollectedAt().format(TIME_FORMATTER) : null)
                 .collectedBy(req.getCollectedBy())
-                .barcode(req.getBarcode())
+                .barcode(req.getLabOrder().getRegistration().getBarcode())
                 .rejectionReason(req.getRejectionReason())
                 .build()
         ).collect(Collectors.toList());
@@ -52,24 +55,36 @@ public class SampleCollectionService {
 
     @Transactional
     public void collectSample(String barcode, CollectSampleRequestDto request) {
-        LabTestRequest testReq = labTestRequestRepository.findByBarcode(barcode)
-                .orElseThrow(() -> new RuntimeException("Test request not found"));
-
-        testReq.setStatus(TestStatus.COLLECTED);
-        testReq.setCollectedBy(request.getCollectedBy());
-        testReq.setCollectedAt(LocalDateTime.now());
-        testReq.setRejectionReason(null); // Clear any previous rejections
+        Registration registration = findRegistrationByBarcode(barcode);
+        LocalDateTime collectedAt = LocalDateTime.now();
+        registration.getLabOrders().stream().flatMap(order -> order.getTestRequests().stream())
+                .filter(test -> test.getStatus() == TestStatus.PENDING_COLLECTION || test.getStatus() == TestStatus.REJECTED)
+                .forEach(test -> {
+                    test.setStatus(TestStatus.COLLECTED);
+                    test.setCollectedBy(request.getCollectedBy());
+                    test.setCollectedAt(collectedAt);
+                    test.setRejectionReason(null);
+                });
     }
 
     @Transactional
     public void rejectSample(String barcode, String reason, String notes) {
-        LabTestRequest testReq = labTestRequestRepository.findByBarcode(barcode)
-                .orElseThrow(() -> new RuntimeException("Test request not found"));
-
-        testReq.setStatus(TestStatus.REJECTED);
         String finalReason = notes != null && !notes.isEmpty() ? reason + " - " + notes : reason;
-        testReq.setRejectionReason(finalReason);
-        testReq.setCollectedBy(null);
-        testReq.setCollectedAt(null);
+        Registration registration = findRegistrationByBarcode(barcode);
+        registration.getLabOrders().stream().flatMap(order -> order.getTestRequests().stream())
+                .filter(test -> test.getStatus() == TestStatus.PENDING_COLLECTION || test.getStatus() == TestStatus.COLLECTED)
+                .forEach(test -> {
+                    test.setStatus(TestStatus.REJECTED);
+                    test.setRejectionReason(finalReason);
+                    test.setCollectedBy(null);
+                    test.setCollectedAt(null);
+                });
+    }
+
+    private Registration findRegistrationByBarcode(String barcode) {
+        return registrationRepository.findByBarcode(barcode)
+                .orElseGet(() -> labTestRequestRepository.findByBarcode(barcode)
+                        .map(request -> request.getLabOrder().getRegistration())
+                        .orElseThrow(() -> new RuntimeException("Registration not found")));
     }
 }

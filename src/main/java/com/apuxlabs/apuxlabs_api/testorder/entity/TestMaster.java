@@ -30,4 +30,7 @@ public class TestMaster {
 
     @Column(nullable = false)
     private BigDecimal defaultPrice;
+
+    @Column(name = "file_upload_allowed", nullable = false)
+    private boolean fileUploadAllowed;
 }

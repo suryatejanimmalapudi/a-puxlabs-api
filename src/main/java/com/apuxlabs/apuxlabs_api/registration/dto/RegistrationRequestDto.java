@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.util.List;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 
 @Getter
 @Setter
@@ -32,6 +33,10 @@ public class RegistrationRequestDto {
     private Long rateListId;
 
     private BigDecimal registrationAmount;
+
+    /** Catalog IDs only; prices and names are resolved by the backend. */
+    private List<Long> testMasterIds = new ArrayList<>();
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 
     private List<String> dispatchMethods;
 }

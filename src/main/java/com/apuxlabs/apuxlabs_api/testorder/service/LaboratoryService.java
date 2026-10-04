@@ -35,9 +35,9 @@ public class LaboratoryService {
     }
 
     @Transactional
-    public void submitResults(String barcode, ResultEntryDto payload) {
-        LabTestRequest request = testRequestRepository.findByBarcode(barcode)
-                .orElseThrow(() -> new RuntimeException("Test request not found with barcode: " + barcode));
+    public void submitResults(Long requestId, ResultEntryDto payload) {
+        LabTestRequest request = testRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Test request not found: " + requestId));
 
         if (request.getStatus() != TestStatus.COLLECTED) {
             throw new IllegalStateException("Can only submit results for collected samples.");
@@ -112,10 +112,13 @@ public class LaboratoryService {
 
     private PendingTestDto mapToPendingTestDto(LabTestRequest req) {
         PendingTestDto dto = new PendingTestDto();
-        dto.setId(req.getBarcode());
+        // Result entry targets the internal test request, while the accession barcode
+        // remains shared by the whole visit/order.
+        dto.setId(req.getId().toString());
 
         // Null checks are a good idea when traversing nested entities
         if (req.getLabOrder() != null && req.getLabOrder().getRegistration() != null) {
+            dto.setBarcode(req.getLabOrder().getRegistration().getBarcode());
             dto.setPatientId(req.getLabOrder().getRegistration().getId());
             dto.setPatientName(req.getLabOrder().getRegistration().getFirstName() + " " + req.getLabOrder().getRegistration().getLastName());
             dto.setGender(req.getLabOrder().getRegistration().getGender());
@@ -126,6 +129,7 @@ public class LaboratoryService {
             dto.setTestName(req.getTestMaster().getName());
             dto.setCode(req.getTestMaster().getCode());
             dto.setDepartment(req.getTestMaster().getDepartment());
+            dto.setFileUploadAllowed(req.getTestMaster().isFileUploadAllowed());
         }
 
         dto.setPriority(req.getPriority() != null ? req.getPriority().name() : "Routine");
@@ -140,7 +144,7 @@ public class LaboratoryService {
     private ReportDto mapToReportDto(LabTestRequest req) {
         ReportDto dto = new ReportDto();
         dto.setId(req.getId());
-        dto.setReportNumber("RPT-" + req.getBarcode());
+        dto.setReportNumber("RPT-" + req.getLabOrder().getRegistration().getBarcode());
         dto.setPatientId(req.getLabOrder().getRegistration().getId());
         dto.setPatientName(req.getLabOrder().getRegistration().getFirstName() + " " +
                 Objects.toString(req.getLabOrder().getRegistration().getLastName(), ""));
