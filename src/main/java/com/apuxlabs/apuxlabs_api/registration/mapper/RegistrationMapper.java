@@ -27,15 +27,12 @@ public class RegistrationMapper
 
         Registration registration = new Registration();
 
-        registration.setDesignation(dto.getDesignation());
         registration.setFirstName(dto.getFirstName());
         registration.setLastName(dto.getLastName());
-        registration.setDateOfBirth(dto.getDateOfBirth());
+        registration.setAge(dto.getAge());
         registration.setGender(dto.getGender());
         registration.setPhone(dto.getPhone());
         registration.setEmail(dto.getEmail());
-        registration.setReferringDoctorId(dto.getReferringDoctorId());
-        registration.setRateListId(dto.getRateListId());
 
         return registration;
     }
@@ -54,15 +51,12 @@ public class RegistrationMapper
         RegistrationResponseDto response = new RegistrationResponseDto();
 
         response.setId(registration.getId());
-        response.setDesignation(registration.getDesignation());
         response.setFirstName(registration.getFirstName());
         response.setLastName(registration.getLastName());
-        response.setDateOfBirth(registration.getDateOfBirth());
+        response.setAge(registration.getAge());
         response.setGender(registration.getGender());
         response.setPhone(registration.getPhone());
         response.setEmail(registration.getEmail());
-        response.setReferringDoctorId(registration.getReferringDoctorId());
-        response.setRateListId(registration.getRateListId());
         response.setRegistrationDate(registration.getRegistrationDate());
         response.setStatus(registration.getStatus());
         response.setCreatedAt(registration.getCreatedAt());

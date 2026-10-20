@@ -4,6 +4,8 @@ import com.apuxlabs.apuxlabs_api.registration.dto.RegistrationRequestDto;
 import com.apuxlabs.apuxlabs_api.registration.dto.RegistrationResponseDto;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import java.time.LocalDateTime;
 
 public interface RegistrationService {
 
@@ -29,6 +31,7 @@ public interface RegistrationService {
      * @return list of all registrations
      */
     List<RegistrationResponseDto> getAllRegistrations();
+    Page<RegistrationResponseDto> searchRegistrations(String search, LocalDateTime fromDate, LocalDateTime toDate, String packageName, org.springframework.data.domain.Pageable pageable);
 
     /**
      * Updates an existing registration.

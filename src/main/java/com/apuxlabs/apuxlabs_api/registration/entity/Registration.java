@@ -1,17 +1,15 @@
 package com.apuxlabs.apuxlabs_api.registration.entity;
 
-import com.apuxlabs.apuxlabs_api.examination.entity.Audiogram;
-import com.apuxlabs.apuxlabs_api.examination.entity.EyeExamination;
-import com.apuxlabs.apuxlabs_api.examination.entity.PhysicalExamination;
+import com.apuxlabs.apuxlabs_api.testorder.entity.LabOrder; // Adjust import to your package structure
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,8 +21,8 @@ public class Registration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 20)
-    private String designation;
+    @Column(unique = true, length = 100)
+    private String barcode;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -32,8 +30,8 @@ public class Registration {
     @Column(name = "last_name", length = 100)
     private String lastName;
 
-    @Column(name = "date_of_birth")
-    private LocalDate dateOfBirth;
+    @Column
+    private Integer age;
 
     @Column(nullable = false, length = 20)
     private String gender;
@@ -44,11 +42,8 @@ public class Registration {
     @Column(length = 255)
     private String email;
 
-    @Column(name = "referring_doctor_id")
-    private Long referringDoctorId;
-
-    @Column(name = "rate_list_id")
-    private Long rateListId;
+    @Column(name = "registration_amount", nullable = false)
+    private java.math.BigDecimal registrationAmount = java.math.BigDecimal.ZERO;
 
     @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
@@ -66,36 +61,15 @@ public class Registration {
             mappedBy = "registration",
             cascade = CascadeType.ALL,
             orphanRemoval = true
-              )
+    )
     private List<RegistrationDispatchMethod> dispatchMethods = new ArrayList<>();
 
-    /**
-     * Physical examinations performed for this registration.
-     *
-     * A registration can have multiple physical examinations over time,
-     * such as annual health checkups.
-     */
+    // NEW: Replaces Physical, Eye, and Audiogram lists.
+    // All clinical activities are now tracked as orders containing JSONB test requests.
     @OneToMany(
             mappedBy = "registration",
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<PhysicalExamination> physicalExaminations = new ArrayList<>();
-
-    @OneToMany(
-            mappedBy = "registration",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<EyeExamination> eyeExaminations = new ArrayList<>();
-
-    /**
-     * Audiograms performed for this registration over time.
-     */
-    @OneToMany(
-            mappedBy = "registration",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<Audiogram> audiograms = new ArrayList<>();
+    private List<LabOrder> labOrders = new ArrayList<>();
 }
