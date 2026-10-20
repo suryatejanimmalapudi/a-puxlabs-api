@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api/v1/worklist")
@@ -39,9 +41,11 @@ public class LaboratoryController {
             )
     })
     @GetMapping("/pending")
-    public ResponseEntity<List<PendingTestDto>> getPendingWorklist() {
-        List<PendingTestDto> dtos = laboratoryService.getPendingWorklist();
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<?> getPendingWorklist(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+                                                 @RequestParam(defaultValue = "") String search, @RequestParam(defaultValue = "") String department,
+                                                 @RequestParam(defaultValue = "") String priority) {
+        if (page < 0 || size < 1 || size > 100) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(laboratoryService.searchPendingWorklist(search, department, priority, PageRequest.of(page, size, Sort.by("collectedAt").ascending())));
     }
 
     @Operation(
@@ -70,8 +74,9 @@ public class LaboratoryController {
     }
 
     @GetMapping("/reports")
-    public ResponseEntity<List<ReportDto>> getReports() {
-        return ResponseEntity.ok(laboratoryService.getReports());
+    public ResponseEntity<?> getReports(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "") String search, @RequestParam(defaultValue = "") String status) {
+        if (page < 0 || size < 1 || size > 100) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(laboratoryService.searchReports(search, status, PageRequest.of(page, size, Sort.by("completedAt").descending())));
     }
 
     @GetMapping("/reports/patient/{patientId}")
@@ -81,7 +86,7 @@ public class LaboratoryController {
 
     @PutMapping("/reports/{id}/verify")
     public ResponseEntity<Void> verifyReport(@PathVariable Long id, @RequestBody VerifyReportRequestDto request) {
-        laboratoryService.verifyReport(id, request.getVerifiedBy());
+        laboratoryService.verifyReport(id, request.getPathologistId());
         return ResponseEntity.ok().build();
     }
 

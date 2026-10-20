@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.math.BigDecimal;
@@ -22,17 +21,13 @@ public class RegistrationResponseDto {
 
     private String lastName;
 
-    private LocalDate dateOfBirth;
+    private Integer age;
 
     private String gender;
 
     private String phone;
 
     private String email;
-
-    private Long referringDoctorId;
-
-    private Long rateListId;
 
     private BigDecimal registrationAmount;
 

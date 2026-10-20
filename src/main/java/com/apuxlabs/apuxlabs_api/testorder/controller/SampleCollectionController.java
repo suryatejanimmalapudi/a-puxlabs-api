@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api/v1/collections")
@@ -18,8 +21,10 @@ public class SampleCollectionController {
     private final SampleCollectionService collectionService;
 
     @GetMapping
-    public ResponseEntity<List<CollectionOrderDto>> getCollectionOrders() {
-        return ResponseEntity.ok(collectionService.getAllCollectionOrders());
+    public ResponseEntity<?> getCollectionOrders(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+                                                  @RequestParam(defaultValue = "") String search, @RequestParam(defaultValue = "") String status) {
+        if (page < 0 || size < 1 || size > 100) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(collectionService.searchCollectionOrders(search, status, PageRequest.of(page, size, Sort.by("priority").descending())));
     }
 
     @PutMapping("/{barcode}/collect")

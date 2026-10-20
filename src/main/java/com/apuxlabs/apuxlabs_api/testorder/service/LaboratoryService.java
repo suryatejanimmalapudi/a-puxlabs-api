@@ -6,25 +6,28 @@ import com.apuxlabs.apuxlabs_api.testorder.dto.ReportDto;
 import com.apuxlabs.apuxlabs_api.testorder.entity.LabTestRequest;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestStatus;
 import com.apuxlabs.apuxlabs_api.testorder.repository.LabTestRequestRepository;
+import com.apuxlabs.apuxlabs_api.testorder.repository.PathologistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.LocalDate;
-import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.apuxlabs.apuxlabs_api.testorder.enums.TestPriority;
 
 @Service
 @RequiredArgsConstructor
 public class LaboratoryService {
 
     private final LabTestRequestRepository testRequestRepository;
+    private final PathologistRepository pathologistRepository;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
 
     @Transactional(readOnly = true)
@@ -32,6 +35,13 @@ public class LaboratoryService {
         List<LabTestRequest> pendingRequests = testRequestRepository.findPendingWorklist(TestStatus.COLLECTED);
 
         return pendingRequests.stream().map(this::mapToPendingTestDto).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PendingTestDto> searchPendingWorklist(String search, String department, String priority, Pageable pageable) {
+        TestPriority parsedPriority = priority == null || priority.isBlank() ? null : TestPriority.valueOf(priority.toUpperCase());
+        return testRequestRepository.searchPendingWorklist(TestStatus.COLLECTED, search == null ? "" : search.trim(), department == null ? "" : department.trim(), parsedPriority, pageable)
+                .map(this::mapToPendingTestDto);
     }
 
     @Transactional
@@ -59,6 +69,12 @@ public class LaboratoryService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ReportDto> searchReports(String search, String status, Pageable pageable) {
+        TestStatus parsedStatus = status == null || status.isBlank() || status.equalsIgnoreCase("All") ? null : TestStatus.valueOf(status.toUpperCase().replace(" ", "_"));
+        return testRequestRepository.searchReports(reportStatuses(), parsedStatus, search == null ? "" : search.trim(), pageable).map(this::mapToReportDto);
+    }
+
+    @Transactional(readOnly = true)
     public List<ReportDto> getPatientReports(Long patientId) {
         return testRequestRepository.findPatientReports(patientId,
                         Arrays.asList(TestStatus.VERIFIED, TestStatus.DELIVERED))
@@ -68,16 +84,18 @@ public class LaboratoryService {
     }
 
     @Transactional
-    public void verifyReport(Long id, String verifiedBy) {
-        if (verifiedBy == null || verifiedBy.isBlank()) {
-            throw new IllegalArgumentException("Verifier name is required.");
-        }
+    public void verifyReport(Long id, Long pathologistId) {
+        if (pathologistId == null) throw new IllegalArgumentException("Pathologist is required.");
+        var pathologist = pathologistRepository.findById(pathologistId)
+                .filter(com.apuxlabs.apuxlabs_api.testorder.entity.Pathologist::isActive)
+                .orElseThrow(() -> new IllegalArgumentException("Active pathologist not found."));
         LabTestRequest request = findReport(id);
         if (request.getStatus() != TestStatus.COMPLETED) {
             throw new IllegalStateException("Only completed reports can be verified.");
         }
         request.setStatus(TestStatus.VERIFIED);
-        request.setVerifiedBy(verifiedBy.trim());
+        request.setPathologist(pathologist);
+        request.setVerifiedBy(pathologist.getName());
         request.setVerifiedAt(LocalDateTime.now());
     }
 
@@ -122,7 +140,7 @@ public class LaboratoryService {
             dto.setPatientId(req.getLabOrder().getRegistration().getId());
             dto.setPatientName(req.getLabOrder().getRegistration().getFirstName() + " " + req.getLabOrder().getRegistration().getLastName());
             dto.setGender(req.getLabOrder().getRegistration().getGender());
-            dto.setAge(calculateAge(req.getLabOrder().getRegistration().getDateOfBirth()));
+            dto.setAge(req.getLabOrder().getRegistration().getAge());
         }
 
         if (req.getTestMaster() != null) {
@@ -148,11 +166,18 @@ public class LaboratoryService {
         dto.setPatientId(req.getLabOrder().getRegistration().getId());
         dto.setPatientName(req.getLabOrder().getRegistration().getFirstName() + " " +
                 Objects.toString(req.getLabOrder().getRegistration().getLastName(), ""));
-        dto.setAge(calculateAge(req.getLabOrder().getRegistration().getDateOfBirth()));
+        dto.setAge(req.getLabOrder().getRegistration().getAge());
         dto.setGender(req.getLabOrder().getRegistration().getGender());
         dto.setTestName(req.getTestMaster().getName());
         dto.setTestCode(req.getTestMaster().getCode());
         dto.setDepartment(req.getTestMaster().getDepartment());
+        dto.setPackageName(req.getTestPackage() != null ? req.getTestPackage().getName() : null);
+        if (req.getPathologist() != null) {
+            dto.setPathologistName(req.getPathologist().getName());
+            dto.setPathologistDesignation(req.getPathologist().getDesignation());
+            dto.setPathologistRegistrationNumber(req.getPathologist().getRegistrationNumber());
+            dto.setPathologistSignatureImagePath(req.getPathologist().getSignatureImagePath());
+        }
         dto.setOrderedBy(req.getLabOrder().getReferringDoctorName());
         dto.setCollectedAt(formatDateTime(req.getCollectedAt()));
         dto.setReportedAt(formatDateTime(req.getCompletedAt()));
@@ -182,10 +207,6 @@ public class LaboratoryService {
                     result.setReferenceRange(Objects.toString(value.get("referenceRange"), ""));
                     return result;
                 }).collect(Collectors.toList());
-    }
-
-    private Integer calculateAge(LocalDate dateOfBirth) {
-        return dateOfBirth == null ? null : Period.between(dateOfBirth, LocalDate.now()).getYears();
     }
 
     private String formatDateTime(LocalDateTime value) {

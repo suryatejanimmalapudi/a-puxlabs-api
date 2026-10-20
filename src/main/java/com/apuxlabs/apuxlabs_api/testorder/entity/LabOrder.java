@@ -38,4 +38,7 @@ public class LabOrder {
 
     @OneToMany(mappedBy = "labOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LabTestRequest> testRequests = new ArrayList<>();
+
+    @OneToMany(mappedBy = "labOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LabOrderPackage> packages = new ArrayList<>();
 }

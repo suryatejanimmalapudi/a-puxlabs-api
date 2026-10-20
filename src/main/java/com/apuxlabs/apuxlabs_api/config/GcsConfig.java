@@ -16,17 +16,19 @@ public class GcsConfig {
     @Value("${spring.cloud.gcp.project-id}")
     private String projectId;
 
-    @Value("${spring.cloud.gcp.credentials.location}")
-    private Resource credentialsResource;
+    @Value("${spring.cloud.gcp.credentials.location:}")
+    private String credentialsLocation;
 
     @Bean
     public Storage googleCloudStorage() throws IOException {
-        var credentials = GoogleCredentials.fromStream(credentialsResource.getInputStream());
-
-        return StorageOptions.newBuilder()
-                .setProjectId(projectId)
-                .setCredentials(credentials)
-                .build()
-                .getService();
+        var builder = StorageOptions.newBuilder().setProjectId(projectId);
+        if (credentialsLocation != null && !credentialsLocation.isBlank()) {
+            var resource = new org.springframework.core.io.DefaultResourceLoader().getResource(credentialsLocation);
+            builder.setCredentials(GoogleCredentials.fromStream(resource.getInputStream()));
+        }
+        // With no explicit credentials, Google Cloud uses Application Default
+        // Credentials when an upload is actually attempted. This keeps local
+        // registration and worklist APIs available without GCS secrets.
+        return builder.build().getService();
     }
 }

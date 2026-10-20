@@ -15,6 +15,11 @@ public class ReportDto {
     private String testName;
     private String testCode;
     private String department;
+    private String packageName;
+    private String pathologistName;
+    private String pathologistDesignation;
+    private String pathologistRegistrationNumber;
+    private String pathologistSignatureImagePath;
     private String orderedBy;
     private String collectedAt;
     private String reportedAt;

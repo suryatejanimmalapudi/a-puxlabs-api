@@ -33,6 +33,14 @@ public class LabTestRequest {
     @JoinColumn(name = "test_master_id", nullable = false)
     private TestMaster testMaster;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "package_id")
+    private TestPackage testPackage;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pathologist_id")
+    private Pathologist pathologist;
+
     @Column(unique = true)
     private String barcode;
 

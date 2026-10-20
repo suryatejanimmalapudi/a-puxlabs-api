@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +30,8 @@ public class Registration {
     @Column(name = "last_name", length = 100)
     private String lastName;
 
-    @Column(name = "date_of_birth")
-    private LocalDate dateOfBirth;
+    @Column
+    private Integer age;
 
     @Column(nullable = false, length = 20)
     private String gender;
@@ -42,12 +41,6 @@ public class Registration {
 
     @Column(length = 255)
     private String email;
-
-    @Column(name = "referring_doctor_id")
-    private Long referringDoctorId;
-
-    @Column(name = "rate_list_id")
-    private Long rateListId;
 
     @Column(name = "registration_amount", nullable = false)
     private java.math.BigDecimal registrationAmount = java.math.BigDecimal.ZERO;

@@ -19,13 +19,19 @@ import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.Random;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import java.time.LocalDateTime;
 import com.apuxlabs.apuxlabs_api.testorder.entity.LabOrder;
 import com.apuxlabs.apuxlabs_api.testorder.entity.LabTestRequest;
 import com.apuxlabs.apuxlabs_api.testorder.entity.TestMaster;
+import com.apuxlabs.apuxlabs_api.testorder.entity.TestPackage;
+import com.apuxlabs.apuxlabs_api.testorder.entity.TestPackageItem;
+import com.apuxlabs.apuxlabs_api.testorder.entity.LabOrderPackage;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestPriority;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestStatus;
 import com.apuxlabs.apuxlabs_api.testorder.repository.LabOrderRepository;
 import com.apuxlabs.apuxlabs_api.testorder.repository.TestMasterRepository;
+import com.apuxlabs.apuxlabs_api.testorder.repository.TestPackageRepository;
 import java.util.UUID;
 
 @Service
@@ -37,6 +43,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final LabOrderRepository labOrderRepository;
     private final TestMasterRepository testMasterRepository;
+    private final TestPackageRepository testPackageRepository;
 
     public RegistrationServiceImpl(
             RegistrationRepository registrationRepository,
@@ -44,7 +51,8 @@ public class RegistrationServiceImpl implements RegistrationService {
             RegistrationDispatchMethodRepository registrationDispatchMethodRepository,
             BillingInvoiceRepository billingInvoiceRepository,
             LabOrderRepository labOrderRepository,
-            TestMasterRepository testMasterRepository) {
+            TestMasterRepository testMasterRepository,
+            TestPackageRepository testPackageRepository) {
 
         this.registrationRepository = registrationRepository;
         this.registrationMapper = registrationMapper;
@@ -52,6 +60,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         this.billingInvoiceRepository = billingInvoiceRepository;
         this.labOrderRepository = labOrderRepository;
         this.testMasterRepository = testMasterRepository;
+        this.testPackageRepository = testPackageRepository;
     }
 
     @Override
@@ -77,7 +86,9 @@ public class RegistrationServiceImpl implements RegistrationService {
         Registration savedRegistration = registrationRepository.save(registration);
 
         // Registration alone is valid and must not create an empty invoice/order.
-        if (request.getTestMasterIds() == null || request.getTestMasterIds().isEmpty()) {
+        boolean hasTests = request.getTestMasterIds() != null && !request.getTestMasterIds().isEmpty();
+        boolean hasPackages = request.getPackageIds() != null && !request.getPackageIds().isEmpty();
+        if (!hasTests && !hasPackages) {
             return registrationMapper.toResponseDto(savedRegistration);
         }
 
@@ -85,7 +96,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         order.setRegistration(savedRegistration);
         order.setReferringDoctorName("Self / No referring doctor");
         BigDecimal gross = BigDecimal.ZERO;
-        for (Long testId : request.getTestMasterIds()) {
+        for (Long testId : request.getTestMasterIds() == null ? java.util.List.<Long>of() : request.getTestMasterIds()) {
             TestMaster master = testMasterRepository.findById(testId)
                     .orElseThrow(() -> new IllegalArgumentException("Inactive or unknown test: " + testId));
             BigDecimal price = master.getDefaultPrice();
@@ -99,6 +110,31 @@ public class RegistrationServiceImpl implements RegistrationService {
             item.setStatus(TestStatus.PENDING_COLLECTION);
             order.getTestRequests().add(item);
             gross = gross.add(price);
+        }
+        for (Long packageId : request.getPackageIds() == null ? java.util.List.<Long>of() : request.getPackageIds()) {
+            TestPackage testPackage = testPackageRepository.findById(packageId)
+                    .filter(TestPackage::isActive)
+                    .orElseThrow(() -> new IllegalArgumentException("Inactive or unknown package: " + packageId));
+            LabOrderPackage orderPackage = new LabOrderPackage();
+            orderPackage.setLabOrder(order);
+            orderPackage.setTestPackage(testPackage);
+            orderPackage.setPackageCode(testPackage.getCode());
+            orderPackage.setPackageName(testPackage.getName());
+            orderPackage.setPackagePrice(testPackage.getPackagePrice());
+            order.getPackages().add(orderPackage);
+            gross = gross.add(testPackage.getPackagePrice());
+            for (TestPackageItem packageItem : testPackage.getItems()) {
+                LabTestRequest item = new LabTestRequest();
+                item.setLabOrder(order);
+                item.setTestMaster(packageItem.getTestMaster());
+                item.setTestPackage(testPackage);
+                item.setBasePrice(packageItem.getPackageTestPrice());
+                item.setDiscountAmount(BigDecimal.ZERO);
+                item.setPriceCharged(packageItem.getPackageTestPrice());
+                item.setPriority(TestPriority.Routine);
+                item.setStatus(TestStatus.PENDING_COLLECTION);
+                order.getTestRequests().add(item);
+            }
         }
         BigDecimal discount = request.getDiscountAmount() == null ? BigDecimal.ZERO : request.getDiscountAmount();
         if (discount.compareTo(gross) > 0 || discount.signum() < 0) throw new IllegalArgumentException("Invalid discount");
@@ -123,15 +159,26 @@ public class RegistrationServiceImpl implements RegistrationService {
         registrationItem.setPrice(savedRegistration.getRegistrationAmount());
         registrationItem.setQuantity(1);
         invoice.getItems().add(registrationItem);
-        order.getTestRequests().forEach(test -> {
+        order.getPackages().forEach(pkg -> {
             BillingInvoiceItem item = new BillingInvoiceItem();
             item.setInvoice(invoice);
-            item.setCode(test.getTestMaster().getCode());
-            item.setName(test.getTestMaster().getName());
-            item.setPrice(test.getPriceCharged());
+            item.setCode(pkg.getPackageCode());
+            item.setName(pkg.getPackageName());
+            item.setPrice(pkg.getPackagePrice());
             item.setQuantity(1);
             invoice.getItems().add(item);
         });
+        order.getTestRequests().stream()
+                .filter(test -> order.getPackages().stream().noneMatch(pkg -> pkg.getTestPackage().getItems().stream().anyMatch(item -> item.getTestMaster().getId().equals(test.getTestMaster().getId()))))
+                .forEach(test -> {
+                    BillingInvoiceItem item = new BillingInvoiceItem();
+                    item.setInvoice(invoice);
+                    item.setCode(test.getTestMaster().getCode());
+                    item.setName(test.getTestMaster().getName());
+                    item.setPrice(test.getPriceCharged());
+                    item.setQuantity(1);
+                    invoice.getItems().add(item);
+                });
         billingInvoiceRepository.save(invoice);
 
         return registrationMapper.toResponseDto(savedRegistration);
@@ -156,6 +203,12 @@ public class RegistrationServiceImpl implements RegistrationService {
                 .toList();
     }
 
+    @Override
+    public Page<RegistrationResponseDto> searchRegistrations(String search, LocalDateTime fromDate, LocalDateTime toDate, String packageName, org.springframework.data.domain.Pageable pageable) {
+        return registrationRepository.searchRegistrations(search == null ? "" : search.trim(), fromDate, toDate, packageName == null ? "" : packageName.trim(), pageable)
+                .map(registrationMapper::toResponseDto);
+    }
+
     @Transactional
     @Override
     public RegistrationResponseDto updateRegistration(Long id, RegistrationRequestDto request) {
@@ -165,12 +218,10 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         registration.setFirstName(request.getFirstName());
         registration.setLastName(request.getLastName());
-        registration.setDateOfBirth(request.getDateOfBirth());
+        registration.setAge(request.getAge());
         registration.setGender(request.getGender());
         registration.setPhone(request.getPhone());
         registration.setEmail(request.getEmail());
-        registration.setReferringDoctorId(request.getReferringDoctorId());
-        registration.setRateListId(request.getRateListId());
         registration.setRegistrationAmount(request.getRegistrationAmount() == null ? BigDecimal.ZERO : request.getRegistrationAmount());
         registration.setUpdatedAt(LocalDateTime.now());
 

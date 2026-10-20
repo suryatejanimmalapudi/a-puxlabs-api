@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class VerifyReportRequestDto {
-    private String verifiedBy;
+    private Long pathologistId;
 }

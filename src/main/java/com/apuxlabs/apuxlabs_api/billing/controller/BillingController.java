@@ -121,8 +121,7 @@ public class BillingController {
   private Response out(BillingInvoice x) {
     var p = x.getRegistration();
     var name = (p.getFirstName() + " " + (p.getLastName() == null ? "" : p.getLastName())).trim();
-    Integer age = p.getDateOfBirth() == null ? 0
-        : java.time.Period.between(p.getDateOfBirth(), LocalDate.now()).getYears();
+    Integer age = p.getAge() == null ? 0 : p.getAge();
     var items = new ArrayList<Item>();
     boolean hasRegistrationFee = x.getItems().stream().anyMatch(i -> "REG-FEE".equalsIgnoreCase(i.getCode()));
     if (!hasRegistrationFee)

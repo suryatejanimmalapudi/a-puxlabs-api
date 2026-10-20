@@ -10,4 +10,5 @@ public class CreateOrderRequestDto {
     private Long registrationId;
     private String referringDoctorName;
     private List<TestItemRequestDto> tests;
+    private List<Long> packageIds;
 }
