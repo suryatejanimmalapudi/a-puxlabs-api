@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class GcsPdfStorageService {
@@ -57,5 +58,21 @@ public class GcsPdfStorageService {
         storage.create(blobInfo, file.getBytes());
 
         return fileName;
+    }
+
+    public String uploadBytes(byte[] bytes, String objectPath, String contentType) {
+        if (bytes == null || bytes.length == 0) throw new IllegalArgumentException("Cannot upload an empty file.");
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectPath))
+                .setContentType(contentType == null ? "application/octet-stream" : contentType)
+                .build();
+        storage.create(blobInfo, bytes);
+        return objectPath;
+    }
+
+    public String createSignedGetUrl(String objectPath, long ttlMinutes) {
+        if (objectPath == null || objectPath.isBlank()) throw new IllegalArgumentException("Report file is not available.");
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectPath)).build();
+        return storage.signUrl(blobInfo, ttlMinutes, TimeUnit.MINUTES,
+                Storage.SignUrlOption.withV4Signature()).toString();
     }
 }

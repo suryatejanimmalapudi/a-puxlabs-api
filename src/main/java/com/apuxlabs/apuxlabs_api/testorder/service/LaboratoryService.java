@@ -21,6 +21,10 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestPriority;
+import com.apuxlabs.apuxlabs_api.service.GcsPdfStorageService;
+import com.apuxlabs.apuxlabs_api.service.ReportPdfService;
+import com.apuxlabs.apuxlabs_api.service.ReportQrCodeService;
+import com.apuxlabs.apuxlabs_api.service.PublicReportBundleService;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,10 @@ public class LaboratoryService {
 
     private final LabTestRequestRepository testRequestRepository;
     private final PathologistRepository pathologistRepository;
+    private final GcsPdfStorageService storageService;
+    private final ReportPdfService reportPdfService;
+    private final ReportQrCodeService reportQrCodeService;
+    private final PublicReportBundleService publicReportBundleService;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
 
     @Transactional(readOnly = true)
@@ -49,8 +57,11 @@ public class LaboratoryService {
         LabTestRequest request = testRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Test request not found: " + requestId));
 
-        if (request.getStatus() != TestStatus.COLLECTED) {
-            throw new IllegalStateException("Can only submit results for collected samples.");
+        if (request.getStatus() == TestStatus.COMPLETED
+                || request.getStatus() == TestStatus.VERIFIED
+                || request.getStatus() == TestStatus.DELIVERED
+                || request.getStatus() == TestStatus.REJECTED) {
+            throw new IllegalStateException("Results have already been finalized for this test request.");
         }
 
         request.setResultData(payload.getResults());
@@ -58,6 +69,16 @@ public class LaboratoryService {
         request.setCompletedAt(LocalDateTime.now());
 
         testRequestRepository.save(request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PendingTestDto> findIntegrationTargets(String barcode) {
+        return testRequestRepository.findIntegrationTargets(
+                        barcode,
+                        Arrays.asList(TestStatus.COMPLETED, TestStatus.VERIFIED, TestStatus.DELIVERED, TestStatus.REJECTED))
+                .stream()
+                .map(this::mapToPendingTestDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -97,6 +118,10 @@ public class LaboratoryService {
         request.setPathologist(pathologist);
         request.setVerifiedBy(pathologist.getName());
         request.setVerifiedAt(LocalDateTime.now());
+        String barcode = request.getLabOrder().getRegistration().getBarcode();
+        String objectPath = "reports/" + request.getId() + "/" + barcode + ".pdf";
+        request.setReportFilePath(storageService.uploadBytes(reportPdfService.createPdf(request), objectPath, "application/pdf"));
+        publicReportBundleService.createOrRefreshBundle(request.getLabOrder().getRegistration());
     }
 
     @Transactional
@@ -138,6 +163,7 @@ public class LaboratoryService {
         if (req.getLabOrder() != null && req.getLabOrder().getRegistration() != null) {
             dto.setBarcode(req.getLabOrder().getRegistration().getBarcode());
             dto.setPatientId(req.getLabOrder().getRegistration().getId());
+            dto.setUhid(req.getLabOrder().getRegistration().getUhid());
             dto.setPatientName(req.getLabOrder().getRegistration().getFirstName() + " " + req.getLabOrder().getRegistration().getLastName());
             dto.setGender(req.getLabOrder().getRegistration().getGender());
             dto.setAge(req.getLabOrder().getRegistration().getAge());
@@ -163,7 +189,13 @@ public class LaboratoryService {
         ReportDto dto = new ReportDto();
         dto.setId(req.getId());
         dto.setReportNumber("RPT-" + req.getLabOrder().getRegistration().getBarcode());
+        var registrationToken = req.getLabOrder().getRegistration().getReportDownloadToken();
+        if (registrationToken != null) {
+            dto.setDownloadUrl(reportQrCodeService.downloadUrl(registrationToken.toString()));
+            dto.setQrCodeDataUrl(reportQrCodeService.dataUrl(registrationToken.toString()));
+        }
         dto.setPatientId(req.getLabOrder().getRegistration().getId());
+        dto.setUhid(req.getLabOrder().getRegistration().getUhid());
         dto.setPatientName(req.getLabOrder().getRegistration().getFirstName() + " " +
                 Objects.toString(req.getLabOrder().getRegistration().getLastName(), ""));
         dto.setAge(req.getLabOrder().getRegistration().getAge());

@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,11 @@ public class SampleCollectionService {
     private final LabTestRequestRepository labTestRequestRepository;
     private final RegistrationRepository registrationRepository;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
+    private static final List<TestStatus> COLLECTION_STATUSES = List.of(
+            TestStatus.PENDING_COLLECTION,
+            TestStatus.COLLECTED,
+            TestStatus.REJECTED
+    );
 
     @Transactional(readOnly = true)
     public List<CollectionOrderDto> getAllCollectionOrders() {
@@ -35,6 +42,7 @@ public class SampleCollectionService {
                 .uid(req.getId().toString())
                 .id(req.getLabOrder().getId().toString())
                 .patientId(req.getLabOrder().getRegistration().getId())
+                .uhid(req.getLabOrder().getRegistration().getUhid())
                 .patientName(req.getLabOrder().getRegistration().getFirstName() + " " + req.getLabOrder().getRegistration().getLastName())
                 .age(req.getLabOrder().getRegistration().getAge())
                 .gender(req.getLabOrder().getRegistration().getGender())
@@ -58,12 +66,12 @@ public class SampleCollectionService {
     @Transactional(readOnly = true)
     public Page<CollectionOrderDto> searchCollectionOrders(String search, String status, Pageable pageable) {
         TestStatus parsedStatus = status == null || status.isBlank() || status.equalsIgnoreCase("All") ? null : TestStatus.valueOf(status.toUpperCase().replace(" ", "_"));
-        return labTestRequestRepository.searchCollections(TestStatus.COMPLETED, parsedStatus, search == null ? "" : search.trim(), pageable)
+        return labTestRequestRepository.searchCollections(COLLECTION_STATUSES, parsedStatus, search == null ? "" : search.trim(), pageable)
                 .map(this::mapCollectionOrder);
     }
 
     private CollectionOrderDto mapCollectionOrder(LabTestRequest req) {
-        return CollectionOrderDto.builder().uid(req.getId().toString()).id(req.getLabOrder().getId().toString()).patientId(req.getLabOrder().getRegistration().getId())
+        return CollectionOrderDto.builder().uid(req.getId().toString()).id(req.getLabOrder().getId().toString()).patientId(req.getLabOrder().getRegistration().getId()).uhid(req.getLabOrder().getRegistration().getUhid())
                 .patientName(req.getLabOrder().getRegistration().getFirstName() + " " + req.getLabOrder().getRegistration().getLastName()).age(req.getLabOrder().getRegistration().getAge())
                 .gender(req.getLabOrder().getRegistration().getGender()).testName(req.getTestMaster().getName()).code(req.getTestMaster().getCode()).department(req.getTestMaster().getDepartment())
                 .sampleType("Serum").container("Red top (plain)").orderedBy(req.getLabOrder().getReferringDoctorName())
@@ -76,14 +84,20 @@ public class SampleCollectionService {
     public void collectSample(String barcode, CollectSampleRequestDto request) {
         Registration registration = findRegistrationByBarcode(barcode);
         LocalDateTime collectedAt = LocalDateTime.now();
-        registration.getLabOrders().stream().flatMap(order -> order.getTestRequests().stream())
+        List<LabTestRequest> pendingTests = registration.getLabOrders().stream()
+                .flatMap(order -> order.getTestRequests().stream())
                 .filter(test -> test.getStatus() == TestStatus.PENDING_COLLECTION || test.getStatus() == TestStatus.REJECTED)
-                .forEach(test -> {
-                    test.setStatus(TestStatus.COLLECTED);
-                    test.setCollectedBy(request.getCollectedBy());
-                    test.setCollectedAt(collectedAt);
-                    test.setRejectionReason(null);
-                });
+                .collect(Collectors.toList());
+        if (pendingTests.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No pending sample was found for " + barcode);
+        }
+        pendingTests.forEach(test -> {
+            test.setStatus(TestStatus.COLLECTED);
+            test.setCollectedBy(request.getCollectedBy());
+            test.setCollectedAt(collectedAt);
+            test.setRejectionReason(null);
+        });
     }
 
     @Transactional
@@ -104,6 +118,24 @@ public class SampleCollectionService {
         return registrationRepository.findByBarcode(barcode)
                 .orElseGet(() -> labTestRequestRepository.findByBarcode(barcode)
                         .map(request -> request.getLabOrder().getRegistration())
-                        .orElseThrow(() -> new RuntimeException("Registration not found")));
+                        .orElseGet(() -> findRegistrationByRequestId(barcode)));
+    }
+
+    private Registration findRegistrationByRequestId(String identifier) {
+        try {
+            long id = Long.parseLong(identifier.replaceFirst("(?i)^REG-", ""));
+            if (identifier.toUpperCase().startsWith("REG-")) {
+                return registrationRepository.findById(id)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Registration not found for " + identifier));
+            }
+            return labTestRequestRepository.findById(id)
+                    .map(request -> request.getLabOrder().getRegistration())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Test request not found for " + identifier));
+        } catch (NumberFormatException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Registration or test request not found for " + identifier, exception);
+        }
     }
 }

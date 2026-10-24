@@ -204,6 +204,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     @Override
+    @Transactional(Transactional.TxType.SUPPORTS)
     public Page<RegistrationResponseDto> searchRegistrations(String search, LocalDateTime fromDate, LocalDateTime toDate, String packageName, org.springframework.data.domain.Pageable pageable) {
         return registrationRepository.searchRegistrations(search == null ? "" : search.trim(), fromDate, toDate, packageName == null ? "" : packageName.trim(), pageable)
                 .map(registrationMapper::toResponseDto);
@@ -217,6 +218,7 @@ public class RegistrationServiceImpl implements RegistrationService {
                 .orElseThrow(() -> new RuntimeException("Registration not found with ID: " + id));
 
         registration.setFirstName(request.getFirstName());
+        registration.setUhid(request.getUhid() == null || request.getUhid().trim().isEmpty() ? null : request.getUhid().trim());
         registration.setLastName(request.getLastName());
         registration.setAge(request.getAge());
         registration.setGender(request.getGender());

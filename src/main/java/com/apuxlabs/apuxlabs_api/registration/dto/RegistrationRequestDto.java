@@ -13,7 +13,7 @@ import java.util.ArrayList;
 @NoArgsConstructor
 public class RegistrationRequestDto {
 
-    private String designation;
+    private String uhid;
 
     private String firstName;
 

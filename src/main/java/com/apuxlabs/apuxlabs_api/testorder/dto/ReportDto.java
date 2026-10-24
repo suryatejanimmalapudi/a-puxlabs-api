@@ -8,7 +8,10 @@ import java.util.List;
 public class ReportDto {
     private Long id;
     private String reportNumber;
+    private String downloadUrl;
+    private String qrCodeDataUrl;
     private Long patientId;
+    private String uhid;
     private String patientName;
     private Integer age;
     private String gender;

@@ -25,6 +25,9 @@ public class LabTestRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "report_file_path", length = 500)
+    private String reportFilePath;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private LabOrder labOrder;

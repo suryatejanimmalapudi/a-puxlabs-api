@@ -8,10 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface RegistrationRepository extends JpaRepository<Registration, Long>
 {
     Optional<Registration> findByBarcode(String barcode);
+
+    Optional<Registration> findByReportDownloadToken(UUID reportDownloadToken);
 
     @Query(value = """
         SELECT DISTINCT r FROM Registration r
@@ -23,6 +26,7 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
           OR LOWER(COALESCE(r.phone, '')) LIKE LOWER(CONCAT('%', :search, '%'))
           OR LOWER(COALESCE(r.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
           OR LOWER(COALESCE(r.barcode, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+          OR LOWER(COALESCE(r.uhid, '')) LIKE LOWER(CONCAT('%', :search, '%'))
           OR CAST(r.id AS string) LIKE CONCAT('%', :search, '%'))
         AND r.registrationDate >= :fromDate
         AND r.registrationDate < :toDate
@@ -38,6 +42,7 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
           OR LOWER(COALESCE(r.phone, '')) LIKE LOWER(CONCAT('%', :search, '%'))
           OR LOWER(COALESCE(r.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
           OR LOWER(COALESCE(r.barcode, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+          OR LOWER(COALESCE(r.uhid, '')) LIKE LOWER(CONCAT('%', :search, '%'))
           OR CAST(r.id AS string) LIKE CONCAT('%', :search, '%'))
         AND r.registrationDate >= :fromDate
         AND r.registrationDate < :toDate

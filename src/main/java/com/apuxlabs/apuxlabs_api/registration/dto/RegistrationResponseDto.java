@@ -15,7 +15,12 @@ public class RegistrationResponseDto {
 
     private Long id;
 
-    private String designation;
+    private String uhid;
+
+    private long pendingTestCount;
+    private long completedTestCount;
+    private List<String> pendingTests;
+    private List<String> completedTests;
 
     private String firstName;
 

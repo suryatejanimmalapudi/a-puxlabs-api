@@ -9,6 +9,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -23,6 +24,15 @@ public class Registration {
 
     @Column(unique = true, length = 100)
     private String barcode;
+
+    @Column(unique = true, length = 100)
+    private String uhid;
+
+    @Column(name = "report_download_token", nullable = false, unique = true, updatable = false)
+    private UUID reportDownloadToken;
+
+    @Column(name = "report_bundle_file_path", length = 500)
+    private String reportBundleFilePath;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -72,4 +82,9 @@ public class Registration {
             orphanRemoval = true
     )
     private List<LabOrder> labOrders = new ArrayList<>();
+
+    @PrePersist
+    void assignReportDownloadToken() {
+        if (reportDownloadToken == null) reportDownloadToken = UUID.randomUUID();
+    }
 }

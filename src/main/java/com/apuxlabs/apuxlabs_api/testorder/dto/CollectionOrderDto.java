@@ -9,6 +9,7 @@ public class CollectionOrderDto {
     private String uid; // Internal ID for React tracking
     private String id; // The Barcode or Order ID
     private Long patientId;
+    private String uhid;
     private String patientName;
     private Integer age;
     private String gender;

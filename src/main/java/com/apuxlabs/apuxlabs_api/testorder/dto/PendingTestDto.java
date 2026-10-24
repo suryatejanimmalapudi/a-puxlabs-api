@@ -7,6 +7,7 @@ public class PendingTestDto {
     private String id; // Internal test-request ID
     private String barcode; // Shared registration/visit barcode
     private Long patientId;
+    private String uhid;
     private String patientName;
     private String gender;
     private Integer age;

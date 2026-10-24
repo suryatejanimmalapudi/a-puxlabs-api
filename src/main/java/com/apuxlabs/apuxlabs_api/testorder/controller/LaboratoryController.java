@@ -48,6 +48,11 @@ public class LaboratoryController {
         return ResponseEntity.ok(laboratoryService.searchPendingWorklist(search, department, priority, PageRequest.of(page, size, Sort.by("collectedAt").ascending())));
     }
 
+    @GetMapping("/integration/targets")
+    public ResponseEntity<List<PendingTestDto>> getIntegrationTargets(@RequestParam String barcode) {
+        return ResponseEntity.ok(laboratoryService.findIntegrationTargets(barcode));
+    }
+
     @Operation(
             summary = "Submit test results",
             description = "Submits the results for a lab test identified by its barcode."
