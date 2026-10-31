@@ -8,9 +8,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @RestController
-@RequestMapping("/api/registrations")
+@RequestMapping("/api/v1/registrations")
 public class RegistrationController {
 
     private final RegistrationService registrationService;
@@ -59,11 +64,21 @@ public class RegistrationController {
      * @return list of all registrations
      */
     @GetMapping
-    public ResponseEntity<List<RegistrationResponseDto>> getAllRegistrations() {
+    public ResponseEntity<?> getAllRegistrations(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate,
+            @RequestParam(defaultValue = "") String packageName) {
 
-        List<RegistrationResponseDto> response =
-                registrationService.getAllRegistrations();
-
+        if (page < 0 || size < 1 || size > 100) return ResponseEntity.badRequest().build();
+        // Always bind typed timestamps. PostgreSQL cannot infer the type of a
+        // null parameter used in an `IS NULL` predicate.
+        LocalDateTime from = fromDate == null ? LocalDateTime.of(1970, 1, 1, 0, 0) : fromDate.atStartOfDay();
+        LocalDateTime to = toDate == null ? LocalDateTime.of(9999, 12, 31, 0, 0) : toDate.plusDays(1).atStartOfDay();
+        Page<RegistrationResponseDto> response = registrationService.searchRegistrations(search, from, to, packageName,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "registrationDate")));
         return ResponseEntity.ok(response);
     }
 

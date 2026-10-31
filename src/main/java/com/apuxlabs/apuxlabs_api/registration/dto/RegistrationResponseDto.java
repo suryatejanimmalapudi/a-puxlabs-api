@@ -4,9 +4,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -15,13 +15,18 @@ public class RegistrationResponseDto {
 
     private Long id;
 
-    private String designation;
+    private String uhid;
+
+    private long pendingTestCount;
+    private long completedTestCount;
+    private List<String> pendingTests;
+    private List<String> completedTests;
 
     private String firstName;
 
     private String lastName;
 
-    private LocalDate dateOfBirth;
+    private Integer age;
 
     private String gender;
 
@@ -29,9 +34,7 @@ public class RegistrationResponseDto {
 
     private String email;
 
-    private Long referringDoctorId;
-
-    private Long rateListId;
+    private BigDecimal registrationAmount;
 
     private LocalDateTime registrationDate;
 

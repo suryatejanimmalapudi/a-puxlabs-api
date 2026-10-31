@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.apuxlabs.apuxlabs_api.testorder.enums.TestStatus;
 
 @Component
 public class RegistrationMapper
@@ -27,17 +28,19 @@ public class RegistrationMapper
 
         Registration registration = new Registration();
 
-        registration.setDesignation(dto.getDesignation());
+        registration.setUhid(normalizeUhid(dto.getUhid()));
         registration.setFirstName(dto.getFirstName());
         registration.setLastName(dto.getLastName());
-        registration.setDateOfBirth(dto.getDateOfBirth());
+        registration.setAge(dto.getAge());
         registration.setGender(dto.getGender());
         registration.setPhone(dto.getPhone());
         registration.setEmail(dto.getEmail());
-        registration.setReferringDoctorId(dto.getReferringDoctorId());
-        registration.setRateListId(dto.getRateListId());
 
         return registration;
+    }
+
+    private String normalizeUhid(String uhid) {
+        return uhid == null || uhid.trim().isEmpty() ? null : uhid.trim();
     }
 
     /**
@@ -54,15 +57,41 @@ public class RegistrationMapper
         RegistrationResponseDto response = new RegistrationResponseDto();
 
         response.setId(registration.getId());
-        response.setDesignation(registration.getDesignation());
+        response.setUhid(registration.getUhid());
+        response.setPendingTestCount(registration.getLabOrders().stream()
+                .flatMap(order -> order.getTestRequests().stream())
+                .filter(test -> test.getStatus() == TestStatus.PENDING_COLLECTION
+                        || test.getStatus() == TestStatus.COLLECTED
+                        || test.getStatus() == TestStatus.REJECTED)
+                .count());
+        response.setCompletedTestCount(registration.getLabOrders().stream()
+                .flatMap(order -> order.getTestRequests().stream())
+                .filter(test -> test.getStatus() == TestStatus.COMPLETED
+                        || test.getStatus() == TestStatus.VERIFIED
+                        || test.getStatus() == TestStatus.DELIVERED)
+                .count());
+        response.setPendingTests(registration.getLabOrders().stream()
+                .flatMap(order -> order.getTestRequests().stream())
+                .filter(test -> test.getStatus() == TestStatus.PENDING_COLLECTION
+                        || test.getStatus() == TestStatus.COLLECTED
+                        || test.getStatus() == TestStatus.REJECTED)
+                .map(test -> test.getTestMaster().getName())
+                .distinct()
+                .toList());
+        response.setCompletedTests(registration.getLabOrders().stream()
+                .flatMap(order -> order.getTestRequests().stream())
+                .filter(test -> test.getStatus() == TestStatus.COMPLETED
+                        || test.getStatus() == TestStatus.VERIFIED
+                        || test.getStatus() == TestStatus.DELIVERED)
+                .map(test -> test.getTestMaster().getName())
+                .distinct()
+                .toList());
         response.setFirstName(registration.getFirstName());
         response.setLastName(registration.getLastName());
-        response.setDateOfBirth(registration.getDateOfBirth());
+        response.setAge(registration.getAge());
         response.setGender(registration.getGender());
         response.setPhone(registration.getPhone());
         response.setEmail(registration.getEmail());
-        response.setReferringDoctorId(registration.getReferringDoctorId());
-        response.setRateListId(registration.getRateListId());
         response.setRegistrationDate(registration.getRegistrationDate());
         response.setStatus(registration.getStatus());
         response.setCreatedAt(registration.getCreatedAt());

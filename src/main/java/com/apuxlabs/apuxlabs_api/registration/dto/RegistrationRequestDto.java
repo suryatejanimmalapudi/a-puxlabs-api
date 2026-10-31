@@ -4,21 +4,22 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.util.List;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public class RegistrationRequestDto {
 
-    private String designation;
+    private String uhid;
 
     private String firstName;
 
     private String lastName;
 
-    private LocalDate dateOfBirth;
+    private Integer age;
 
     private String gender;
 
@@ -26,9 +27,12 @@ public class RegistrationRequestDto {
 
     private String email;
 
-    private Long referringDoctorId;
+    private BigDecimal registrationAmount;
 
-    private Long rateListId;
+    /** Catalog IDs only; prices and names are resolved by the backend. */
+    private List<Long> testMasterIds = new ArrayList<>();
+    private List<Long> packageIds = new ArrayList<>();
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 
     private List<String> dispatchMethods;
 }
