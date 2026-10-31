@@ -21,10 +21,7 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestPriority;
-import com.apuxlabs.apuxlabs_api.service.GcsPdfStorageService;
-import com.apuxlabs.apuxlabs_api.service.ReportPdfService;
 import com.apuxlabs.apuxlabs_api.service.ReportQrCodeService;
-import com.apuxlabs.apuxlabs_api.service.PublicReportBundleService;
 
 @Service
 @RequiredArgsConstructor
@@ -32,10 +29,7 @@ public class LaboratoryService {
 
     private final LabTestRequestRepository testRequestRepository;
     private final PathologistRepository pathologistRepository;
-    private final GcsPdfStorageService storageService;
-    private final ReportPdfService reportPdfService;
     private final ReportQrCodeService reportQrCodeService;
-    private final PublicReportBundleService publicReportBundleService;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
 
     @Transactional(readOnly = true)
@@ -118,10 +112,6 @@ public class LaboratoryService {
         request.setPathologist(pathologist);
         request.setVerifiedBy(pathologist.getName());
         request.setVerifiedAt(LocalDateTime.now());
-        String barcode = request.getLabOrder().getRegistration().getBarcode();
-        String objectPath = "reports/" + request.getId() + "/" + barcode + ".pdf";
-        request.setReportFilePath(storageService.uploadBytes(reportPdfService.createPdf(request), objectPath, "application/pdf"));
-        publicReportBundleService.createOrRefreshBundle(request.getLabOrder().getRegistration());
     }
 
     @Transactional

@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
+import java.util.EnumMap;
+import java.util.Map;
+import com.google.zxing.EncodeHintType;
 
 @Service
 public class ReportQrCodeService {
@@ -24,10 +27,20 @@ public class ReportQrCodeService {
 
     public String dataUrl(String token) {
         try {
-            var matrix = new QRCodeWriter().encode(downloadUrl(token), BarcodeFormat.QR_CODE, 240, 240);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(pngBytes(token));
+        } catch (Exception exception) {
+            throw new IllegalStateException("Could not generate report QR code", exception);
+        }
+    }
+
+    public byte[] pngBytes(String token) {
+        try {
+            Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+            hints.put(EncodeHintType.MARGIN, 2);
+            var matrix = new QRCodeWriter().encode(downloadUrl(token), BarcodeFormat.QR_CODE, 320, 320, hints);
             try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
                 MatrixToImageWriter.writeToStream(matrix, "PNG", output, new MatrixToImageConfig());
-                return "data:image/png;base64," + Base64.getEncoder().encodeToString(output.toByteArray());
+                return output.toByteArray();
             }
         } catch (Exception exception) {
             throw new IllegalStateException("Could not generate report QR code", exception);
