@@ -16,12 +16,15 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.http.HttpMethod;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.apuxlabs.apuxlabs_api.security.LabStaffGatekeeperFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@EnableScheduling
 public class SecurityConfig {
 
     private final LabStaffGatekeeperFilter labStaffGatekeeperFilter;
@@ -47,7 +50,21 @@ public class SecurityConfig {
             .cors(cors -> {})
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/error", "/swagger-ui/**", "/v3/api-docs/**", "/public/reports/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Public catalogue data is needed by all signed-in staff; catalogue/package changes are admin-only.
+                .requestMatchers(HttpMethod.GET, "/api/v1/test-catalog/**", "/api/v1/test-packages/**", "/api/v1/pathologists/**").authenticated()
+                .requestMatchers("/api/v1/test-packages/**").hasRole("ADMIN")
+                // Reception and administrators manage front-desk, registration, orders and billing.
+                .requestMatchers(HttpMethod.GET, "/api/v1/registrations/**", "/api/v1/billing/**").hasAnyRole("ADMIN", "RECEPTIONIST", "TECHNICIAN")
+                .requestMatchers("/api/v1/registrations/**", "/api/v1/orders/**", "/api/v1/billing/**").hasAnyRole("ADMIN", "RECEPTIONIST")
+                // Laboratory operations are restricted to technicians and administrators.
+                .requestMatchers("/api/v1/collections/**", "/api/v1/lab-test-requests/**", "/api/v1/ecg/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/worklist/reports/patient/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/worklist/reports/patient/**").hasAnyRole("ADMIN", "TECHNICIAN", "RECEPTIONIST")
+                .requestMatchers(HttpMethod.GET, "/api/v1/worklist/reports/**").hasAnyRole("ADMIN", "TECHNICIAN", "RECEPTIONIST")
+                .requestMatchers(HttpMethod.GET, "/api/v1/worklist/pending", "/api/v1/worklist/integration/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/worklist/*/results", "/api/v1/worklist/reports/*/reject").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/worklist/reports/*/verify", "/api/v1/worklist/reports/*/deliver").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}))
             .addFilterAfter(labStaffGatekeeperFilter, BearerTokenAuthenticationFilter.class);

@@ -28,8 +28,14 @@ public class Registration {
     @Column(unique = true, length = 100)
     private String uhid;
 
-    @Column(name = "report_download_token", nullable = false, unique = true, updatable = false)
+    @Column(name = "report_download_token", nullable = false, unique = true)
     private UUID reportDownloadToken;
+
+    @Column(name = "report_download_token_issued_at", nullable = false)
+    private LocalDateTime reportDownloadTokenIssuedAt;
+
+    @Column(name = "report_download_token_expires_at", nullable = false)
+    private LocalDateTime reportDownloadTokenExpiresAt;
 
     @Column(name = "report_bundle_file_path", length = 500)
     private String reportBundleFilePath;
@@ -86,5 +92,14 @@ public class Registration {
     @PrePersist
     void assignReportDownloadToken() {
         if (reportDownloadToken == null) reportDownloadToken = UUID.randomUUID();
+        if (reportDownloadTokenIssuedAt == null) reportDownloadTokenIssuedAt = LocalDateTime.now();
+        if (reportDownloadTokenExpiresAt == null) reportDownloadTokenExpiresAt = reportDownloadTokenIssuedAt.plusDays(30);
+    }
+
+    /** Rotates the public report bearer token and invalidates the previous QR/link. */
+    public void rotateReportDownloadToken() {
+        reportDownloadToken = UUID.randomUUID();
+        reportDownloadTokenIssuedAt = LocalDateTime.now();
+        reportDownloadTokenExpiresAt = reportDownloadTokenIssuedAt.plusDays(30);
     }
 }

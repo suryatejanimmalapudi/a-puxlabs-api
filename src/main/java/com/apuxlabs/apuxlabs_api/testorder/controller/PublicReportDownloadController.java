@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -27,20 +28,24 @@ public class PublicReportDownloadController {
     private final ReportDownloadRateLimiter rateLimiter;
 
     @Value("${app.report-download-token-ttl-minutes:5}")
-    private long tokenTtlMinutes;
+    private long signedUrlTtlMinutes;
 
     @GetMapping("/download/{downloadToken}")
     public ResponseEntity<Void> download(@PathVariable UUID downloadToken, HttpServletRequest request) {
-        if (!rateLimiter.tryConsume(request.getRemoteAddr())) {
+        if (!rateLimiter.tryConsume(request.getRemoteAddr(), downloadToken)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
 
         Registration registration = registrationRepository.findByReportDownloadToken(downloadToken).orElse(null);
         if (registration == null) return ResponseEntity.notFound().build();
+        if (registration.getReportDownloadTokenExpiresAt() == null
+                || !registration.getReportDownloadTokenExpiresAt().isAfter(LocalDateTime.now())) {
+            return ResponseEntity.notFound().build();
+        }
         if (registration.getReportBundleFilePath() == null || registration.getReportBundleFilePath().isBlank()) {
             return ResponseEntity.notFound().build();
         }
-        String signedUrl = storageService.createSignedGetUrl(registration.getReportBundleFilePath(), tokenTtlMinutes);
+        String signedUrl = storageService.createSignedGetUrl(registration.getReportBundleFilePath(), signedUrlTtlMinutes);
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, URI.create(signedUrl).toString())
                 .build();

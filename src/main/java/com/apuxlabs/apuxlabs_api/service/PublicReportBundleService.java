@@ -4,6 +4,7 @@ import com.apuxlabs.apuxlabs_api.registration.entity.Registration;
 import com.apuxlabs.apuxlabs_api.testorder.entity.LabTestRequest;
 import com.apuxlabs.apuxlabs_api.testorder.enums.TestStatus;
 import com.apuxlabs.apuxlabs_api.testorder.repository.LabTestRequestRepository;
+import com.apuxlabs.apuxlabs_api.registration.repository.RegistrationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ public class PublicReportBundleService {
     private final LabTestRequestRepository requestRepository;
     private final ReportPdfService reportPdfService;
     private final GcsPdfStorageService storageService;
+    private final RegistrationRepository registrationRepository;
 
     public String createOrRefreshBundle(Registration registration) {
         List<LabTestRequest> reports = requestRepository.findPublicReports(
@@ -23,6 +25,9 @@ public class PublicReportBundleService {
         if (reports.isEmpty()) {
             throw new IllegalStateException("No verified reports are available for this visit.");
         }
+        // Refreshing a bundle issues a new QR/link and revokes the previous bearer token.
+        registration.rotateReportDownloadToken();
+        registrationRepository.save(registration);
         String objectPath = "reports/" + registration.getId() + "/bundle-"
                 + registration.getReportDownloadToken() + ".pdf";
         String storedPath = storageService.uploadBytes(reportPdfService.createCombinedPdf(reports), objectPath, "application/pdf");
